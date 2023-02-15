@@ -1,36 +1,35 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"net/http"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"net/http"
 )
 
-var (
-	httpRequestsTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "http_requests_total",
-			Help: "Total number of HTTP requests.",
-		},
-		[]string{"method", "endpoint"},
-	)
-)
+var myCounter = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "my_counter",
+		Help: "This is my example counter.",
+	})
 
-func main() {
-	// Register the httpRequestsTotal counter with Prometheus.
-	prometheus.MustRegister(httpRequestsTotal)
-
-	// Start the HTTP server.
-	http.HandleFunc("/", handleRequest)
-	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":8080", nil)
+func init() {
+	prometheus.MustRegister(myCounter)
 }
 
-func handleRequest(w http.ResponseWriter, r *http.Request) {
-	// Increment the httpRequestsTotal counter for this endpoint.
-	httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path).Inc()
+func handleRequest() {
+	// your code here
+	myCounter.Inc()
+}
 
-	// Return a response to the client.
-	fmt.Fprintf(w, "Hello, world!")
+func main() {
+	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
+		handleRequest()
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Hello, world!"))
+	})
+
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
