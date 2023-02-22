@@ -25,4 +25,10 @@
 * click on add panel on the new dashboard page to add a panel to the dashboard
 * ![img_20.png](docs/img_20.png)
 
-## to add different types of panels to your dashboard and configure them refer to the ![ReadmePanel.md](ReadmeBarChart.md)
+## to add different types of panels click on the link below and follow the steps:
+* [BarChart](ReadmeBarChart.md)
+* [Gauge](ReadmeGauge.md)
+* [PieChart](ReadmePieChart.md)
+* [Stat](ReadmeStat.md)
+* [TimeSeries](ReadmeTimeSeries.md)
+* [Histogram](ReadmeHistogram.md)
