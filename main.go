@@ -1,28 +1,25 @@
 package main
 
 import (
-	"log"
-	"math/rand"
-	"net/http"
-	"time"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"log"
+	"net/http"
 )
 
 var (
 	histogramVec = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
-			Help:    "Histogram of HTTP request durations.",
-			Buckets: []float64{0.1, 0.2, 0.5, 1, 2, 5},
+			Name:    "my_request_status_code",
+			Help:    "Histogram of HTTP request status codes by method and path.",
+			Buckets: []float64{200, 300, 400, 500},
 		},
-		[]string{"method", "path"},
+		[]string{"method", "path", "status_code"},
 	)
 
 	counterVec = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "http_request_total",
+			Name: "my_counter",
 			Help: "Counter of HTTP requests.",
 		},
 		[]string{"method", "path", "status"},
@@ -30,13 +27,14 @@ var (
 
 	gauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "queue_size",
+			Name: "queue",
 			Help: "Number of items in the queue.",
 		},
 	)
 )
 
 func init() {
+
 	prometheus.MustRegister(histogramVec)
 	prometheus.MustRegister(gauge)
 	prometheus.MustRegister(counterVec)
@@ -45,18 +43,25 @@ func init() {
 func main() {
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		status := rand.Intn(1000)
-
-		histogramVec.WithLabelValues(r.Method, r.URL.Path).Observe(time.Since(start).Seconds())
-		counterVec.WithLabelValues(r.Method, r.URL.Path, string(status)).Inc()
-		gauge.Inc()
-
+		histogramVec.WithLabelValues(r.Method, r.URL.Path, "200").Observe(1)
+		counterVec.WithLabelValues(r.Method, r.URL.Path, "200").Inc()
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Hello, world!"))
 	})
-	http.HandleFunc("/bad", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) })
-	http.HandleFunc("/internal", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusInternalServerError) })
+	http.HandleFunc("/bad", func(w http.ResponseWriter, r *http.Request) {
+		histogramVec.WithLabelValues(r.Method, r.URL.Path, "400").Observe(1)
+		counterVec.WithLabelValues(r.Method, r.URL.Path, "400").Inc()
+		gauge.Inc()
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad, world!"))
+	})
+	http.HandleFunc("/internal", func(w http.ResponseWriter, r *http.Request) {
+		histogramVec.WithLabelValues(r.Method, r.URL.Path, "500").Observe(1)
+		counterVec.WithLabelValues(r.Method, r.URL.Path, "500").Inc()
+		gauge.Inc()
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Error"))
+	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
